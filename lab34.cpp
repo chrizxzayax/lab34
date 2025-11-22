@@ -7,22 +7,22 @@
 #include <limits>
 #include <algorithm>
 #include <string>
-#include <sstream>
 #include <iomanip>
-#include <set>
 
-const int INF = std::numeric_limits<int>::max();
 using namespace std;
+
+const int INF = numeric_limits<int>::max();
 
 class Graph {
 public:
     vector<vector<pair<int,int>>> adj;
-    int n; 
+    int n; // number of nodes
 
     Graph(int nodes = 0) {
         n = nodes;
         adj.assign(n, {});
     }
+
     void resize(int new_n) {
         if (new_n <= n) return;
         adj.resize(new_n);
@@ -40,6 +40,7 @@ public:
         adj[u].push_back({v,w});
         adj[v].push_back({u,w});
     }
+
     void remove_edge(int u, int v) {
         if (!valid(u) || !valid(v)) return;
         auto &A = adj[u];
@@ -50,11 +51,12 @@ public:
 
     void remove_node(int u) {
         if (!valid(u)) return;
-        // remove edges 
+        // remove edges to u
         for (int i = 0; i < n; ++i) {
             if (i==u) continue;
             remove_edge(i,u);
         }
+        // clear adjacency of u
         adj[u].clear();
     }
 
@@ -113,29 +115,33 @@ public:
             if (vis[u]) continue;
             vis[u]=1;
             order.push_back(u);
+            // To produce natural order similar to recursive, push neighbors in reverse
             vector<int> neigh;
             for (auto &p: adj[u]) neigh.push_back(p.first);
-            sort(neigh.begin(), neigh.end(), greater<int>()); 
+            sort(neigh.begin(), neigh.end(), greater<int>()); // deterministic
             for (int v : neigh) if (!vis[v]) st.push(v);
         }
         return order;
     }
 
+    // Dijkstra from src: returns dist vector (INF for unreachable)
     vector<long long> dijkstra(int src) const {
         vector<long long> dist(n, (long long)INF);
         if (!valid(src)) return dist;
         using pli = pair<long long,int>;
         priority_queue<pli, vector<pli>, greater<pli>> pq;
         dist[src]=0;
-        pq.push({0,src});
+        pq.push(make_pair(0LL, src));
         while(!pq.empty()){
-            auto [d,u] = pq.top(); pq.pop();
+            pair<long long,int> top = pq.top(); pq.pop();
+            long long d = top.first;
+            int u = top.second;
             if (d != dist[u]) continue;
             for (auto &p: adj[u]) {
                 int v = p.first; int w = p.second;
                 if (dist[v] > dist[u] + w) {
                     dist[v] = dist[u] + w;
-                    pq.push({dist[v], v});
+                    pq.push(make_pair(dist[v], v));
                 }
             }
         }
@@ -146,7 +152,9 @@ public:
         vector<char> used(n, 0);
         vector<long long> mincost(n, LLONG_MAX);
         vector<int> parent(n, -1);
+        // start at node 0 by default (if empty graph return empty)
         for (int i=0;i<n;i++) {
+            // find any node with non-empty adjacency to start, prefer 0 otherwise
             if (!adj[i].empty()) { mincost[i]=0; parent[i]=-1; break; }
             if (i==n-1) { // graph empty: nothing to do
                 vector<tuple<int,int,int>> emp; return {0, emp};
@@ -154,16 +162,17 @@ public:
         }
         using pli = pair<long long,int>;
         priority_queue<pli, vector<pli>, greater<pli>> pq;
-        // find initial node
         int start = 0;
         for (int i=0;i<n;++i) { if (!adj[i].empty()) { start=i; break; } }
         fill(mincost.begin(), mincost.end(), LLONG_MAX);
         mincost[start]=0;
-        pq.push({0,start});
+        pq.push(make_pair(0LL,start));
         long long total = 0;
         vector<tuple<int,int,int>> edges;
         while(!pq.empty()){
-            auto [c,u] = pq.top(); pq.pop();
+            pair<long long,int> top = pq.top(); pq.pop();
+            long long c = top.first;
+            int u = top.second;
             if (used[u]) continue;
             used[u]=1;
             total += c;
@@ -173,29 +182,33 @@ public:
                 if (!used[v] && w < mincost[v]) {
                     mincost[v] = w;
                     parent[v] = u;
-                    pq.push({mincost[v], v});
+                    pq.push(make_pair(mincost[v], v));
                 }
             }
         }
         return {total, edges};
     }
 
+    // helper to print path from dijkstra parent info (recompute via predecessor)
     vector<int> dijkstra_parent_path(int src, int dest, vector<int> &parent_out) const {
+        // We'll compute parent via Dijkstra variant
         parent_out.assign(n, -1);
         vector<long long> dist(n, LLONG_MAX);
         using pli = pair<long long,int>;
         priority_queue<pli, vector<pli>, greater<pli>> pq;
         dist[src]=0;
-        pq.push({0,src});
+        pq.push(make_pair(0LL, src));
         while(!pq.empty()){
-            auto [d,u] = pq.top(); pq.pop();
+            pair<long long,int> top = pq.top(); pq.pop();
+            long long d = top.first;
+            int u = top.second;
             if (d != dist[u]) continue;
             for (auto &p: adj[u]) {
                 int v=p.first; int w=p.second;
                 if (dist[v] > dist[u] + w) {
                     dist[v] = dist[u] + w;
                     parent_out[v] = u;
-                    pq.push({dist[v], v});
+                    pq.push(make_pair(dist[v], v));
                 }
             }
         }
@@ -207,6 +220,9 @@ public:
         return path;
     }
 };
+
+// A small descriptive wrapper that interprets nodes as "junctions" etc.
+// This is used for Step 3 to present a domain-specific printout.
 void print_network_description(const Graph &g) {
     cout << "Water Distribution Network Topology (simple view):\n";
     for (int i = 0; i < g.n; ++i) {
@@ -221,7 +237,6 @@ void print_network_description(const Graph &g) {
     }
     cout << "\n";
 }
-
 Graph build_sample_graph() {
     Graph G(9);
     G.add_edge(0,1,8);
@@ -245,12 +260,14 @@ int prompt_int(const string &msg) {
     int v; while(!(cin >> v)) { cin.clear(); cin.ignore(1024,'\n'); cout << "Invalid. " << msg; }
     return v;
 }
+
 string read_line_trim() {
     string s;
     getline(cin, s);
     if (!s.empty() && s.back()=='\r') s.pop_back();
     return s;
 }
+
 void print_dijkstra_result(const Graph &G, int src) {
     if (!G.valid(src)) { cout << "Invalid source\n"; return; }
     auto dist = G.dijkstra(src);
@@ -287,7 +304,6 @@ void menu_print() {
 }
 
 int main(){
-
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
@@ -295,14 +311,12 @@ int main(){
     cout << "Sample graph loaded (nodes: " << G.n << ").\n\n";
 
     bool running = true;
-
-    while(running){
-
+    while (running) {
         menu_print();
         int choice;
         if (!(cin >> choice)) {
             cin.clear(); cin.ignore(1024,'\n');
-            cout << "Invalid input\n"; continue;// continue loop
+            cout << "Invalid input\n"; continue;
         }
         cin.ignore(1024,'\n'); // flush eol
         switch(choice) {
@@ -379,7 +393,6 @@ int main(){
         cout << "\n";
     }
 
-    cout << "Exiting.\n";
-
+    cout << "Exiting. Goodbye.\n";
     return 0;
 }
