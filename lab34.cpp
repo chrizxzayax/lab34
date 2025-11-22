@@ -3,6 +3,9 @@
 #include <vector>
 #include <queue>
 #include <iomanip>
+#include <string>
+
+#include <iomanip>
 
 
 
@@ -97,6 +100,19 @@ Graph build_sample_graph() {
     G.add_edge(6,7,3);
     return G;
 }
+int prompt_int(const string &msg) {
+    cout << msg;
+    int v; while(!(cin >> v)) { cin.clear(); cin.ignore(1024,'\n'); cout << "Invalid. " << msg; }
+    return v;
+}
+
+// Utility: read string line
+string read_line_trim() {
+    string s;
+    getline(cin, s);
+    if (!s.empty() && s.back()=='\r') s.pop_back();
+    return s;
+}
 
 
 int main(){
@@ -105,5 +121,13 @@ int main(){
     cin.tie(nullptr);
 
     Graph G = build_sample_graph();
+    cout << "Sample graph loaded (nodes: " << G.n << ").\n\n";
+
+    bool running = true;
+
+    while(running){
+
+        menu_print();
+    }
 
 }
