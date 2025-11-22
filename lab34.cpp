@@ -2,7 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <stack>
+#include <iomanip>
+
 
 
 using namespace std;
@@ -38,8 +39,44 @@ public:
         if (u >= n) resize(u+1);// resize graph
     }
 
+       bool valid(int u) const {
+        return u >= 0 && u < n;
+    }
+
+    // BFS from start: returns order visited
+    vector<int> bfs(int start) const {
+        vector<int> order;
+        if (!valid(start)) return order;
+        vector<char> vis(n,0);
+        queue<int> q;
+        vis[start]=1; q.push(start);
+        while(!q.empty()){
+            int u=q.front(); q.pop();
+            order.push_back(u);
+            for (auto &p: adj[u]) {
+                int v = p.first;
+                if (!vis[v]) { vis[v]=1; q.push(v); }
+            }
+        }
+        return order;
+    }
 
 };
+
+void print_network_description(const Graph &g) {
+    cout << "Water Distribution Network Topology (simple view):\n";
+    for (int i = 0; i < g.n; ++i) {
+        cout << " Junction " << setw(2) << i << " connected to: ";
+        if (g.adj[i].empty()) { cout << "(none)"; }
+        else {
+            for (auto &p: g.adj[i]) {
+                cout << p.first << "(" << p.second << ")\t";
+            }
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+}
 
 Graph build_sample_graph() {
     Graph G(9);
