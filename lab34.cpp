@@ -1,27 +1,28 @@
 // // comsc 210 | lab33 | Christian Molina
 #include <iostream>
+#include <tuple>
 #include <vector>
 #include <queue>
 #include <stack>
+#include <limits>
 #include <algorithm>
 #include <string>
-
+#include <sstream>
 #include <iomanip>
+#include <set>
 
-
-
+const int INF = std::numeric_limits<int>::max();
 using namespace std;
 
 class Graph {
 public:
     vector<vector<pair<int,int>>> adj;
-    int n; // number of nodes
+    int n; 
 
     Graph(int nodes = 0) {
         n = nodes;
         adj.assign(n, {});
     }
-
     void resize(int new_n) {
         if (new_n <= n) return;
         adj.resize(new_n);
@@ -32,22 +33,58 @@ public:
         adj.emplace_back();
         n = (int)adj.size();
     }
-        void add_edge(int u, int v, int w) {// add edge u-v with weight w
+
+    void add_edge(int u, int v, int w) {
         ensure_node(u);
         ensure_node(v);
         adj[u].push_back({v,w});
         adj[v].push_back({u,w});
     }
-
-    void ensure_node(int u) {
-        if (u >= n) resize(u+1);// resize graph
+    void remove_edge(int u, int v) {
+        if (!valid(u) || !valid(v)) return;
+        auto &A = adj[u];
+        A.erase(remove_if(A.begin(), A.end(), [&](const pair<int,int>&p){ return p.first==v; }), A.end());
+        auto &B = adj[v];
+        B.erase(remove_if(B.begin(), B.end(), [&](const pair<int,int>&p){ return p.first==u; }), B.end());
     }
 
-       bool valid(int u) const {
+    void remove_node(int u) {
+        if (!valid(u)) return;
+        // remove edges 
+        for (int i = 0; i < n; ++i) {
+            if (i==u) continue;
+            remove_edge(i,u);
+        }
+        adj[u].clear();
+    }
+
+    bool change_weight(int u, int v, int neww) {
+        if (!valid(u) || !valid(v)) return false;
+        bool found=false;
+        for (auto &p: adj[u]) if (p.first==v) { p.second=neww; found=true; }
+        for (auto &p: adj[v]) if (p.first==u) { p.second=neww; found=true; }
+        return found;
+    }
+
+    void print_adj() const {
+        cout << "Graph adjacency list:\n";
+        for (int i = 0; i < n; ++i) {
+            cout << i << " -> ";
+            for (auto &p: adj[i]) {
+                cout << "(" << p.first << ", " << p.second << ") ";
+            }
+            cout << "\n";
+        }
+    }
+
+    void ensure_node(int u) {
+        if (u >= n) resize(u+1);
+    }
+
+    bool valid(int u) const {
         return u >= 0 && u < n;
     }
 
-    // BFS from start: returns order visited
     vector<int> bfs(int start) const {
         vector<int> order;
         if (!valid(start)) return order;
@@ -65,8 +102,85 @@ public:
         return order;
     }
 
-     vector<int> dijkstra_parent_path(int src, int dest, vector<int> &parent_out) const {
-        // We'll compute parent via Dijkstra variant
+    vector<int> dfs(int start) const {
+        vector<int> order;
+        if (!valid(start)) return order;
+        vector<char> vis(n,0);
+        stack<int> st;
+        st.push(start);
+        while(!st.empty()){
+            int u = st.top(); st.pop();
+            if (vis[u]) continue;
+            vis[u]=1;
+            order.push_back(u);
+            vector<int> neigh;
+            for (auto &p: adj[u]) neigh.push_back(p.first);
+            sort(neigh.begin(), neigh.end(), greater<int>()); 
+            for (int v : neigh) if (!vis[v]) st.push(v);
+        }
+        return order;
+    }
+
+    vector<long long> dijkstra(int src) const {
+        vector<long long> dist(n, (long long)INF);
+        if (!valid(src)) return dist;
+        using pli = pair<long long,int>;
+        priority_queue<pli, vector<pli>, greater<pli>> pq;
+        dist[src]=0;
+        pq.push({0,src});
+        while(!pq.empty()){
+            auto [d,u] = pq.top(); pq.pop();
+            if (d != dist[u]) continue;
+            for (auto &p: adj[u]) {
+                int v = p.first; int w = p.second;
+                if (dist[v] > dist[u] + w) {
+                    dist[v] = dist[u] + w;
+                    pq.push({dist[v], v});
+                }
+            }
+        }
+        return dist;
+    }
+
+    pair<long long, vector<tuple<int,int,int>>> prim_mst() const {
+        vector<char> used(n, 0);
+        vector<long long> mincost(n, LLONG_MAX);
+        vector<int> parent(n, -1);
+        for (int i=0;i<n;i++) {
+            if (!adj[i].empty()) { mincost[i]=0; parent[i]=-1; break; }
+            if (i==n-1) { // graph empty: nothing to do
+                vector<tuple<int,int,int>> emp; return {0, emp};
+            }
+        }
+        using pli = pair<long long,int>;
+        priority_queue<pli, vector<pli>, greater<pli>> pq;
+        // find initial node
+        int start = 0;
+        for (int i=0;i<n;++i) { if (!adj[i].empty()) { start=i; break; } }
+        fill(mincost.begin(), mincost.end(), LLONG_MAX);
+        mincost[start]=0;
+        pq.push({0,start});
+        long long total = 0;
+        vector<tuple<int,int,int>> edges;
+        while(!pq.empty()){
+            auto [c,u] = pq.top(); pq.pop();
+            if (used[u]) continue;
+            used[u]=1;
+            total += c;
+            if (parent[u] != -1) edges.emplace_back(parent[u], u, (int)c);
+            for (auto &p: adj[u]) {
+                int v = p.first; int w = p.second;
+                if (!used[v] && w < mincost[v]) {
+                    mincost[v] = w;
+                    parent[v] = u;
+                    pq.push({mincost[v], v});
+                }
+            }
+        }
+        return {total, edges};
+    }
+
+    vector<int> dijkstra_parent_path(int src, int dest, vector<int> &parent_out) const {
         parent_out.assign(n, -1);
         vector<long long> dist(n, LLONG_MAX);
         using pli = pair<long long,int>;
@@ -92,9 +206,7 @@ public:
         reverse(path.begin(), path.end());
         return path;
     }
-
 };
-
 void print_network_description(const Graph &g) {
     cout << "Water Distribution Network Topology (simple view):\n";
     for (int i = 0; i < g.n; ++i) {
@@ -112,7 +224,6 @@ void print_network_description(const Graph &g) {
 
 Graph build_sample_graph() {
     Graph G(9);
-    // add weighted edges 
     G.add_edge(0,1,8);
     G.add_edge(0,2,14);
     G.add_edge(0,3,13);
@@ -134,8 +245,6 @@ int prompt_int(const string &msg) {
     int v; while(!(cin >> v)) { cin.clear(); cin.ignore(1024,'\n'); cout << "Invalid. " << msg; }
     return v;
 }
-
-// Utility: read string line
 string read_line_trim() {
     string s;
     getline(cin, s);
@@ -150,6 +259,18 @@ void print_dijkstra_result(const Graph &G, int src) {
         if (dist[i] >= INF) cout << src << " -> " << i << " : unreachable\n";
         else cout << src << " -> " << i << " : " << dist[i] << "\n";
     }
+}
+
+void print_mst(const Graph &G) {
+    auto res = G.prim_mst();
+    long long total = res.first;
+    auto edges = res.second;
+    cout << "Minimum Spanning Tree edges (Prim): total weight = " << total << "\n";
+    for (auto &t: edges) {
+        int u,v,w; tie(u,v,w)=t;
+        cout << " Edge from " << u << " to " << v << " with capacity: " << w << " units\n";
+    }
+    cout << "\n";
 }
 
 void menu_print() {
@@ -182,6 +303,21 @@ int main(){
         if (!(cin >> choice)) {
             cin.clear(); cin.ignore(1024,'\n');
             cout << "Invalid input\n"; continue;// continue loop
+        }
+        cin.ignore(1024,'\n'); // flush eol
+        switch(choice) {
+            case 1: {
+                G.print_adj();
+                break;
+            }
+            case 2: {
+                int start = prompt_int("BFS start node: ");
+                auto order = G.bfs(start);
+                cout << "BFS order starting from vertex " << start << ":\n";
+                for (int v: order) cout << v << " ";
+                cout << "\n";
+                break;
+            }
         }
     }
 
