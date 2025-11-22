@@ -365,7 +365,18 @@ int main(){
                 } else cout << "Unknown choice\n";
                 break;
             }
+            case 7: {
+                print_network_description(G);
+                break;
+            }
+            case 0: {
+                running = false;
+                break;
+            }
+            default:
+                cout << "Invalid menu choice\n";
         }
+        cout << "\n";
     }
 
     cout << "Exiting.\n";
