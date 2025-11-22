@@ -318,7 +318,57 @@ int main(){
                 cout << "\n";
                 break;
             }
+            case 3: {
+                int start = prompt_int("DFS start node: ");
+                auto order = G.dfs(start);
+                cout << "DFS order starting from vertex " << start << ":\n";
+                for (int v: order) cout << v << " ";
+                cout << "\n";
+                break;
+            }
+            case 4: {
+                int src = prompt_int("Dijkstra source node: ");
+                print_dijkstra_result(G, src);
+                break;
+            }
+            case 5: {
+                print_mst(G);
+                break;
+            }
+            case 6: {
+                cout << "Graph modification menu:\n";
+                cout << "[1] Add node\n";
+                cout << "[2] Remove node (clears adjacency)\n";
+                cout << "[3] Add undirected edge\n";
+                cout << "[4] Remove edge\n";
+                cout << "[5] Change edge weight\n";
+                cout << "Choice: ";
+                int m; if(!(cin>>m)) { cin.clear(); cin.ignore(1024,'\n'); cout<<"Invalid\n"; break; }
+                if (m==1) {
+                    G.add_node();
+                    cout << "Added node " << (G.n-1) << "\n";
+                } else if (m==2) {
+                    int u = prompt_int("Node to remove: ");
+                    G.remove_node(u);
+                    cout << "Removed node (cleared) " << u << "\n";
+                } else if (m==3) {
+                    int u = prompt_int("u: "); int v = prompt_int("v: "); int w = prompt_int("weight: ");
+                    G.add_edge(u,v,w);
+                    cout << "Added edge " << u << " <-> " << v << " w=" << w << "\n";
+                } else if (m==4) {
+                    int u = prompt_int("u: "); int v = prompt_int("v: ");
+                    G.remove_edge(u,v);
+                    cout << "Removed edge(s) between " << u << " and " << v << "\n";
+                } else if (m==5) {
+                    int u = prompt_int("u: "); int v = prompt_int("v: "); int w = prompt_int("new weight: ");
+                    if (G.change_weight(u,v,w)) cout << "Weight changed\n"; else cout << "Edge not found\n";
+                } else cout << "Unknown choice\n";
+                break;
+            }
         }
     }
 
+    cout << "Exiting.\n";
+
+    return 0;
 }
