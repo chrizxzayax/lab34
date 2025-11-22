@@ -181,7 +181,7 @@ int main(){
         int choice;
         if (!(cin >> choice)) {
             cin.clear(); cin.ignore(1024,'\n');
-            cout << "Invalid input\n"; continue;
+            cout << "Invalid input\n"; continue;// continue loop
         }
     }
 
