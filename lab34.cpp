@@ -2,7 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <iomanip>
+#include <stack>
+#include <algorithm>
 #include <string>
 
 #include <iomanip>
@@ -64,6 +65,34 @@ public:
         return order;
     }
 
+     vector<int> dijkstra_parent_path(int src, int dest, vector<int> &parent_out) const {
+        // We'll compute parent via Dijkstra variant
+        parent_out.assign(n, -1);
+        vector<long long> dist(n, LLONG_MAX);
+        using pli = pair<long long,int>;
+        priority_queue<pli, vector<pli>, greater<pli>> pq;
+        dist[src]=0;
+        pq.push({0,src});
+        while(!pq.empty()){
+            auto [d,u] = pq.top(); pq.pop();
+            if (d != dist[u]) continue;
+            for (auto &p: adj[u]) {
+                int v=p.first; int w=p.second;
+                if (dist[v] > dist[u] + w) {
+                    dist[v] = dist[u] + w;
+                    parent_out[v] = u;
+                    pq.push({dist[v], v});
+                }
+            }
+        }
+        // build path
+        vector<int> path;
+        if (dist[dest] == LLONG_MAX) return path;
+        for (int cur = dest; cur != -1; cur = parent_out[cur]) path.push_back(cur);
+        reverse(path.begin(), path.end());
+        return path;
+    }
+
 };
 
 void print_network_description(const Graph &g) {
@@ -113,7 +142,28 @@ string read_line_trim() {
     if (!s.empty() && s.back()=='\r') s.pop_back();
     return s;
 }
+void print_dijkstra_result(const Graph &G, int src) {
+    if (!G.valid(src)) { cout << "Invalid source\n"; return; }
+    auto dist = G.dijkstra(src);
+    cout << "Shortest path distances from node " << src << ":\n";
+    for (int i = 0; i < G.n; ++i) {
+        if (dist[i] >= INF) cout << src << " -> " << i << " : unreachable\n";
+        else cout << src << " -> " << i << " : " << dist[i] << "\n";
+    }
+}
 
+void menu_print() {
+    cout << "Water Distribution Network Menu:\n";
+    cout << "[1] Display network adjacency list\n";
+    cout << "[2] Check contaminant spread (BFS)\n";
+    cout << "[3] Plan inspection route (DFS)\n";
+    cout << "[4] Calculate shortest paths (Dijkstra)\n";
+    cout << "[5] Find Minimum Spanning Tree (Prim)\n";
+    cout << "[6] Modify graph (add/remove node/edge/change weight)\n";
+    cout << "[7] Print domain description (junctions view)\n";
+    cout << "[0] Exit\n";
+    cout << "Enter your choice: ";
+}
 
 int main(){
 
@@ -128,6 +178,11 @@ int main(){
     while(running){
 
         menu_print();
+        int choice;
+        if (!(cin >> choice)) {
+            cin.clear(); cin.ignore(1024,'\n');
+            cout << "Invalid input\n"; continue;
+        }
     }
 
 }
